@@ -4,10 +4,7 @@ def add_PlaneRecTR_config(cfg):
     """
     Add config for PlaneRecTR.
     """
-    # NOTE: configs from original maskformer
-    # data config
-    # select the dataset mapper
-    # cfg.INPUT.DATASET_MAPPER_NAME = "mask_former_semantic" #!
+
     cfg.INPUT.DATASET_MAPPER_NAME = "scannetv1_plane"
     # Color augmentation
     cfg.INPUT.COLOR_AUG_SSD = False
@@ -156,11 +153,9 @@ def add_PlaneRecTR_config(cfg):
     # transformer module
     cfg.MODEL.MASK_FORMER.TRANSFORMER_DECODER_NAME = "MultiScaleMaskedTransformerDecoder"
 
-    # LSJ aug
-    # cfg.INPUT.IMAGE_SIZE = 1024 #!
+
     cfg.INPUT.IMAGE_SIZE = (192, 256)
-    # cfg.INPUT.MIN_SCALE = 0.1
-    # cfg.INPUT.MAX_SCALE = 2.0 # !
+
     cfg.INPUT.MIN_SCALE = 0.6
     cfg.INPUT.MAX_SCALE = 1.5
     cfg.INPUT.DATA_PAIR2SINGLE = False
@@ -190,10 +185,8 @@ def add_PlaneRecTR_config(cfg):
 
     cfg.TEST.VIS_PERIOD = 30
 
-    # ! for sparseviews_plane_dataset_mapper & scannet
     cfg.DATASETS.ROOT_DIR = "/home/jingjia/data/scannetv2_multiview/"
 
-    # ! add for camera_module
     # mask_former model config
     cfg.MODEL.CAMERA_MODULE = CN()
     cfg.MODEL.CAMERA_MODULE.PREDICT_POSES = True

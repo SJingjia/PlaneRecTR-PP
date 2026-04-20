@@ -222,9 +222,6 @@ def assignment_inference(attn_corrs, match_threshold, th_method = 0, label_mask0
             print("Error: th_method")
 
         if True:
-            # label_mask0 = label_mask[:self.num_queries]
-            # label_mask1 = label_mask[self.num_queries:]
-            # attn_corrs = attn_corrs[label_mask0][:,label_mask1]  # (nq, nq) -> n1, n2
             
             attn_corr[:, ~label_mask0] = 0.
             attn_corr[:, :, ~label_mask1] = 0.
@@ -276,7 +273,6 @@ class Evaluator:
         self.normal_threshold = normal_threshold
         self.offset_threshold = offset_threshold
 
-        #!
         self.root_dir = cfg.DATASETS.ROOT_DIR
 
 
@@ -905,12 +901,10 @@ class Evaluator:
                     "position": np.array([0, 0, 0]),
                     "rotation": np.quaternion(1, 0, 0, 0),
                 }
-            #!
             plane_params = np.array(
                 [ann["plane"] for ann in self.dataset_dict[key][str(i)]["annotations"]]
             )
 
-            #!
             # Local frame
             offset = np.maximum(
                 np.linalg.norm(plane_params, ord=2, axis=1), 1e-5

@@ -826,17 +826,9 @@ class PlaneRecTR(nn.Module):
                             mode="bilinear",
                             align_corners=False,
                         ) # torch.Size([b,num_queries,h,w])
-                    
-                    
                 
-                
-                    # for mask_cls_result, mask_pred_result, param_pred_result, depth_pred_result, input_per_image, image_size in zip(
-                    #     mask_cls_results, mask_pred_results, param_pred_results, depth_pred_results, batched_inputs, images[str(i)].image_sizes
-                    # ):
                 for ir, item in enumerate(zip(batched_inputs, images["0"].image_sizes)):
                     input_per_image, image_size = item
-                    # processed_results.append({"0":{}, "1":{}})
-                    #! only ir = 0 
                     label_masks = []
                     for i in range(2):    
                         height = input_per_image[str(i)].get("height", image_size[0]) # ep 349
@@ -858,13 +850,7 @@ class PlaneRecTR(nn.Module):
                         
                         label_masks.append(label_mask)
 
-                        
-                        # processed_results[-1][str(i)]["sem_seg"] = plane_seg # (num_queries+1, h, w)
-                        # processed_results[-1][str(i)]["planes_depth"] = inferred_planes_depth
-                        # # processed_results[-1][str(i)]["seg_depth"] = inferred_seg_depth
-                        # processed_results[-1][str(i)]["valid_params"] = valid_param
-                        # processed_results[-1][str(i)]["valid_scores"] = valid_score
-                        # processed_results[-1][str(i)]["label_mask"] = label_mask
+
                         edge_results[str(ed[i])]["sem_seg"] = plane_seg # (num_queries+1, h, w)
                         edge_results[str(ed[i])]["planes_depth"] = inferred_planes_depth
                         # processed_results[-1][str(i)]["seg_depth"] = inferred_seg_depth

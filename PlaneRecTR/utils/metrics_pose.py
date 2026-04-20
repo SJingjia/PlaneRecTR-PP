@@ -47,29 +47,6 @@ def eval_camera(pred_poses, gt_poses, pair_names, acc_threshold, using_sub = Fal
         "rot": 2 * np.arccos(np.clip(np.abs(np.sum(np.multiply(pred_rot, gt_rot), axis=1)), -1.0, 1.0)) * 180 / np.pi,
     }
 
-    # gt_mags = {"tran": np.linalg.norm(gt_tran, axis=1), "rot": 2 * np.arccos(gt_rot[:,0]) * 180 / np.pi}
-    
-
-    # delete_index0 = (top1_error["rot"] > 50) & (gt_mags["rot"] > 100)
-    # delete_index1 = gt_mags["rot"] > 100
-
-    # len_delete_index0 = delete_index0.sum()
-    # len_delete_index1 = delete_index1.sum()
-    # print("len_delete_index0 = (top1_error> 50) & (gt_mags > 100), len_delete_index1 = gt_mags > 100", len_delete_index0, len_delete_index1)
-    # select_index0 = ~delete_index0
-    # select_index1 = ~delete_index1
-
-    
-
-    # top1_error["tran"] = top1_error["tran"][select_index0]
-    # top1_error["rot"] = top1_error["rot"][select_index0]
-
-    # gt_mags["tran"] = gt_mags["tran"][select_index0]
-    # gt_mags["rot"] = gt_mags["rot"][select_index0]
-
-    # pair_names = [pn for i,pn in enumerate(pair_names) if select_index0[i]]
-
-    # ! <(pose vit) -> <=(nope-sac)
     top1_accuracy = {
         "tran": [
             (top1_error["tran"] <= i).sum()
@@ -95,16 +72,6 @@ def eval_camera(pred_poses, gt_poses, pair_names, acc_threshold, using_sub = Fal
     
     if save_path != None:
         gt_mags = {"tran": np.linalg.norm(gt_tran, axis=1), "rot": 2 * np.arccos(np.abs(gt_rot[:,0])) * 180 / np.pi} # add np.abs -> [-180, 180]
-        # np.savetxt(os.path.join(save_path,"del_top1_error>50&gt_mags>100.txt"), select_index0, fmt = "%d")
-        # np.savetxt(os.path.join(save_path,"del_gt_mags>100.txt"), select_index1, fmt = "%d")
-
-        # tran_graph = np.stack([gt_mags['tran'], top1_error['tran']],axis=1)
-        # tran_graph_name = os.path.join(save_path, 'gt_translation_magnitude_vs_error.csv')
-        # np.savetxt(tran_graph_name, tran_graph, delimiter=',', fmt='%1.5f')
-
-        # rot_graph = np.stack([gt_mags['rot'], top1_error['rot']],axis=1)
-        # rot_graph_name = os.path.join(save_path, 'gt_rotation_magnitude_vs_error.csv')
-        # np.savetxt(rot_graph_name, rot_graph, delimiter=',', fmt='%1.5f')
 
         tran_graph = np.stack([gt_mags['tran'], top1_error['tran']],axis=1)
         tran_graph_df = pd.DataFrame(tran_graph, index = pair_names)

@@ -144,46 +144,7 @@ def save_matching(
         num_planes = len(scores)
         segs = (np.expand_dims(seg, -1) == np.arange(num_planes)).astype(np.uint8) # (h.w,n)
         segs = segs.transpose((2,0,1)) # (n, h, w)
-        # # ins_new = []
-        # segs_new = []
-        # # plane_new = np.zeros_like(plane)
-        # scores_new = np.zeros_like(scores)
-
-        # for pi in range(matched_num):
-        #     # ins_new.append(ins[idxs_all[i][pi]])
-        #     segs_new.append(segs[idxs_all[i][pi]])
-        #     # plane_new[pi] = plane[idxs_all[i][pi]]
-        #     scores_new[pi] = scores[idxs_all[i][pi]]
-
-        # idx_temp = 0
-        # # for ri in range(len(ins)):
-        # for ri in range(len(segs)):
-        #     if ri in idxs_all[i]:
-        #         continue
-        #     # ins_new.append(ins[ri])
-        #     segs_new.append(segs[ri])
-        #     # plane_new[matched_num + idx_temp] = plane[ri]
-        #     scores_new[matched_num + idx_temp] = scores[ri]
-        #     idx_temp += 1
-
-        # # assert matched_num + idx_temp == len(ins)
-        # assert matched_num + idx_temp == len(segs)
-
-        # p_instance = create_instances(
-        #     pred_dict[str(i)]["instances"],
-        #     img.shape[:2],
-        #     pred_planes=pred_dict[str(i)]["pred_plane"].numpy(),
-        #     conf_threshold=score_threshold,
-        # )
-
-        # segs_new = np.stack(segs_new) # (vn, h, w)
-        # p_instance_align = create_instances(
-        #     segs_new,
-        #     scores_new,
-        #     img.shape[:2],
-        #     # pred_planes=plane_new,
-        #     conf_threshold=score_threshold,
-        # )  # <class 'detectron2.structures.instances.Instances'>
+        
         p_instance_align = create_instances(
             segs,
             scores,
@@ -225,8 +186,6 @@ def save_matching(
 
 
 def save_pair_objects(
-    # img_file1,
-    # img_file2,
     pred_dict,
     output_dir,
     prefix="",
@@ -239,18 +198,8 @@ def save_pair_objects(
     camera_K=-1,
     radius = 0.01,
 ):
-    """
-    if tran_topk == -2 and rot_topk == -2, then pred_camera should not be None, this is used for non-binned camera.
-    if exclude is not None, exclude some instances to make fig 2.
-    idx=7867
-    exclude = {
-        '0': [2,3,4,5,6,7],
-        '1': [0,1,2,4,5,6,7],
-    }
-    """
-    # image_paths = {"0": img_file1, "1": img_file2}
     meshes_list = []
-    # map_files = []
+
     uv_maps = []
     cam_list = []
     # get plane parameters
@@ -286,9 +235,7 @@ def save_pair_objects(
                 "position": np.array([0, 0, 0]),
                 "rotation": np.quaternion(1, 0, 0, 0),
             }
-        # p_instance = p_instances[str(i)]
         plane_params = plane_locals[str(i)]
-        # segmentations = p_instance.pred_masks
         seg = pred_dict[str(i)]["segmentation"] # (h, w); gt: nonplane num_queries ; pred: nonplane num_queries+1
         scores = pred_dict[str(i)]["valid_scores"]
         num_planes = len(scores)
@@ -296,16 +243,14 @@ def save_pair_objects(
         segs = segs.transpose((2,0,1)) # (n, h, w)
         tolerance = 0.0
         poly_segs = [binary_mask_to_polygon(bm, tolerance) for bm in segs]
-        meshes, uv_map = get_single_image_mesh_plane( #! segmentations
+        meshes, uv_map = get_single_image_mesh_plane( 
             plane_params,
             poly_segs,
-            # img_file=image_paths[str(i)],
-            # image = pred_dict[str(i)]["image"][:,:,::-1], # ! BGR -> RGB
             image = pred_dict[str(i)]["image"], # ! RGB
             height=height,
             width=width,
             webvis=False,
-            camera_K=camera_K   #! camera_K?????
+            camera_K=camera_K
         )
         uv_maps.extend(uv_map)
         meshes = transform_meshes(meshes, camera_info)
@@ -313,7 +258,6 @@ def save_pair_objects(
         cam_list.append(camera_info)
 
     joint_mesh = join_meshes_as_batch(meshes_list)
-    # import pdb;pdb.set_trace()
     if webvis:
         joint_mesh = rotate_mesh_for_webview(joint_mesh)
 
@@ -363,8 +307,6 @@ class SparseViewsVisualizer():
         vis_3dmesh = False,
         vis_frustum = False,
         vis_period = 50,
-        # image_size = (480, 640),
-        # dataset="mp3d_test", 
         match_threshold = 0.2, 
         corr_idx = 0, 
         th_method = 0,
@@ -378,12 +320,11 @@ class SparseViewsVisualizer():
         if output_dir is not None:  
             self._output_dir = output_dir
         else:
-            self._output_dir = pjoin(os.path.split(args.rcnn_cached_file)[0], "outputs" if vis_period > 0 else "select_outputs_" + time.strftime("%Y%m%d-%H%M%S")) 
+            self._output_dir = pjoin(os.path.split(args.rcnn_cached_file)[0], "outputs") 
 
 
         self._cpu_device = torch.device("cpu")
-        # self._num_planes = num_planes
-        # self._num_queries = num_planes + 1 if "npr" in dataset_name else num_planes # TODO: add npr
+
         self._num_queries = cfg.MODEL.MASK_FORMER.NUM_OBJECT_QUERIES
         self.vis_matching = vis_matching
         self.vis_3dmesh = vis_3dmesh
@@ -410,14 +351,13 @@ class SparseViewsVisualizer():
                                      "oTh="+str(self.offset_threshold)
                                      ]).replace(".","-")
 
-        #!
+
         self.root_dir = cfg.DATASETS.ROOT_DIR
         self.img_format = cfg.INPUT.FORMAT
 
         rcnn_cached_file = args.rcnn_cached_file
         with open(rcnn_cached_file, "rb") as f:
             print('loading rcnn cached file from {}'.format(rcnn_cached_file))
-            #! self.rcnn_data = torch.load(f)
             self.rcnn_data = list(pickle.load(f).values())  # dict-> list
             print("rcnn cached file has been loaded")
        
@@ -444,14 +384,6 @@ class SparseViewsVisualizer():
             key0 = dic["0"]["image_id"]
             key1 = dic["1"]["image_id"]
             key = key0 + "__" + key1
-            #! for i in range(len(dic["0"]["annotations"])):
-            #     dic["0"]["annotations"][i]["bbox_mode"] = BoxMode(
-            #         dic["0"]["annotations"][i]["bbox_mode"]
-            #     )
-            # for i in range(len(dic["1"]["annotations"])):
-            #     dic["1"]["annotations"][i]["bbox_mode"] = BoxMode(
-            #         dic["1"]["annotations"][i]["bbox_mode"]
-            #     )
             dataset_dict[key] = dic
         self.dataset_dict = dataset_dict
 
@@ -497,17 +429,6 @@ class SparseViewsVisualizer():
         self.camera_eval_dict = {}
         self.gt_mags = {}
         for idx in tqdm(range(len(self.rcnn_data))):
-            # if return_dict is None:
-            #     raise ValueError
-            # else:
-            #     if 'gt_camera' in return_dict[idx]:
-            #         gt_cam = return_dict[idx]["gt_camera"]
-            #     else:
-            #         gt_cam = {
-            #             "position": self.rcnn_data[idx]['camera']['gts']['tran'],
-            #             "rotation": self.rcnn_data[idx]['camera']['gts']['rot'],
-            #         }
-            # pred_cam = return_dict[idx]["best_camera"]
 
             key = self.rcnnidx2datasetkey(idx)
             gt_cam = self.dataset_dict[key]["rel_pose"]
@@ -516,9 +437,6 @@ class SparseViewsVisualizer():
                 "rotation": np.array(gt_cam["rotation"]),
             }
 
-            # for ck in pred_cam:
-            #     if isinstance(pred_cam[ck], torch.Tensor):
-            #         pred_cam[ck] = pred_cam[ck].numpy().reshape(-1)
             pred_cam = self.rcnn_data[idx]["pred_pose"]
             pred_cam = {
                     "position": pred_cam["position"],
@@ -587,34 +505,12 @@ class SparseViewsVisualizer():
                 tran_acc4 * 100, rot_acc4 * 100)
         )
 
-        # camera_eval_dict = {
-        #     "tran_errs": np.array(tran_errs),
-        #     "rot_errs": np.array(rot_errs),
-        #     "mean_tran_err": mean_tran_err,
-        #     "mean_rot_err": mean_rot_err,
-        #     "median_tran_err": median_tran_err,
-        #     "median_rot_err": median_rot_err,
-        #     "tran_acc": tran_acc,
-        #     "rot_acc": rot_acc,
-        # }
-
-        # save_histplot(np.array(rot_errs), save_dir=self._output_dir)
         print("Done.")
 
     def evaluate_matching_precision_recall(self):
 
         print("Evaluating matching precision and recall...")
         self.matching_pr_dict = {}
-
-        # all_matched_num = 0.
-        # all_gt_num = 0.
-        # all_correct_num = 0.
-        # pre = 0.
-        # recall = 0.
-
-        # new_all_matched_num = 0.
-        # new_all_gt_num = 0.
-        # new_all_correct_num = 0.
 
         update_all_matched_num = 0.
         update_all_gt_num = 0.
@@ -627,7 +523,7 @@ class SparseViewsVisualizer():
 
                     
             gt_corr = np.array(self.dataset_dict[key]["gt_corrs"])
-            gt_corr = gt_corr.tolist() #!!!!!!!!!!!!!!!!!!!
+            gt_corr = gt_corr.tolist() #!
             individual_miou = self.get_maskiou(idx)
 
             # print(key)
@@ -658,7 +554,7 @@ class SparseViewsVisualizer():
             # all_correct_num += correct_num
             # all_gt_num += len(gt_corr)
 
-            #! UPDATE
+            #UPDATE
             update_pred_matched_num = len(update_pred_corr)
             update_correct_num = 0
             for i in range(update_pred_matched_num):
@@ -680,14 +576,14 @@ class SparseViewsVisualizer():
             self.matching_pr_dict[key] = {}
             if update_pred_matched_num == 0:
                 self.matching_pr_dict[key]["precision"] = -1
-                # !continue
+                # continue
             else:
                 self.matching_pr_dict[key]["precision"] = float(update_correct_num) / float(update_pred_matched_num)
                 # pre += float(update_correct_num) / float(update_pred_matched_num)
 
             if len(gt_corr) == 0:
                 self.matching_pr_dict[key]["recall"] = -1
-                # !continue
+                # continue
             else:
                 self.matching_pr_dict[key]["recall"] = float(update_correct_num) / float(len(gt_corr))
                 # recall += float(update_correct_num) / float(len(gt_corr))
@@ -755,50 +651,13 @@ class SparseViewsVisualizer():
         outputs = self.rcnn_data
 
 
-        select_index = []
-        for s_i, item in enumerate(self.camera_eval_dict.items()):
-            cam_key, cam_dict = item 
-            gt_cam_dict = self.gt_mags[cam_key]
-            # if "scannetv2" in self._dataset_name:
-            #     # if cam_dict["rot_err"] < 1.2 and cam_dict["tran_err"] < 0.3:
-            #     #     select_index.append(s_i)
-            #     if cam_dict["rot_err"] < 3. and cam_dict["tran_err"] < 0.1: 
-            #         # if cam_dict["rot_err"] < 1.2:
-            #         #     continue
-            #         # else:
-            #         select_index.append(s_i)
-            # elif "mp3d" in self._dataset_name:
-            #     if cam_dict["rot_err"] < 1.0 and cam_dict["tran_err"] < 0.1:
-            #         select_index.append(s_i)
-            if "scannetv2" in self._dataset_name:
-                # if cam_dict["rot_err"] < 1.2 and cam_dict["tran_err"] < 0.3:
-                #     select_index.append(s_i)
-                if cam_dict["rot_err"] > 165.: 
-                    # if cam_dict["rot_err"] < 1.2:
-                    #     continue
-                    # else:
-                    select_index.append(s_i)
-            elif "mp3d" in self._dataset_name:
-                if cam_dict["rot_err"] > 165.:
-                    select_index.append(s_i)
-        select_index = select_index[:200]
-
-        if self.vis_period < 0:
-            os.makedirs(self._output_dir, exist_ok=True)
-            save_list_to_file(select_index, pjoin(self._output_dir, "select_index.txt"))
-
         vis_iter = 0
         # for input, output in tqdm(zip(inputs, outputs)):
         for output in tqdm(outputs):
-            # output, indices, gt_corrs = output_tuple
-            if self.vis_period == -1:
-                if vis_iter not in select_index:
-                    vis_iter += 1
-                    continue
-            else:
-                if vis_iter % self.vis_period != 0:
-                    vis_iter += 1
-                    continue
+
+            if vis_iter % self.vis_period != 0:
+                vis_iter += 1
+                continue
 
             # single image evaluation
             key0 = output["0"]["image_id"]
@@ -809,8 +668,8 @@ class SparseViewsVisualizer():
 
             cam_dict = self.camera_eval_dict[key]
             gtcam_dict = self.gt_mags[key]
-            cam_error_prefix = "IND" + str(vis_iter) +"_R{:.1f}_t{:.1f}_gtR{:.1f}_gtt{:.1f}".format(cam_dict["rot_err"], cam_dict["tran_err"], gtcam_dict["gtrot"], gtcam_dict["gttran"]).replace(".","-")
-
+            # cam_error_prefix = "IND" + str(vis_iter) +"_R{:.1f}_t{:.1f}_gtR{:.1f}_gtt{:.1f}".format(cam_dict["rot_err"], cam_dict["tran_err"], gtcam_dict["gtrot"], gtcam_dict["gttran"]).replace(".","-")
+            cam_error_prefix = ""
 
             gt_vis_dicts = []
             pred_vis_dicts = []
@@ -823,7 +682,7 @@ class SparseViewsVisualizer():
                 valid_scores = output[str(i)]["valid_scores"]
 
                 if "sparseviews" in self._dataset_name:
-                    # gt_plane_masks = input[str(i)]["plane_masks"].tensor.to(self._cpu_device).numpy()
+                    
                     if "scannetv2" in self._dataset_name:
 
                         ps = input[str(i)]["file_name"].split("/")
@@ -866,10 +725,6 @@ class SparseViewsVisualizer():
                         image = utils.read_image(
                             input[str(i)]["file_name"], format=self.img_format
                         )
-                        # image = cv2.resize(image, (self.image_size[1], self.image_size[0]))
-
-                        # dataset_dict[str(i)]["image"] = torch.as_tensor(np.ascontiguousarray(image.transpose(2, 0, 1)))
-
                         
                         house, img_id = input[str(i)]["image_id"].split("_", 1)
                         masks_path = os.path.join(
@@ -884,9 +739,6 @@ class SparseViewsVisualizer():
                         # This assertion is to check dataset is clean
                         # assert((obs['color_sensor'][:,:,:3][:,:,::-1].transpose(2, 0, 1)-dataset_dict[str(i)]["image"].numpy()).sum()==0)
                         semantic_map = obs["semantic_sensor"] # 0: non-plane (480, 640) uint32
-                        # dataset_dict[str(i)]["semantic_map"] = torch.as_tensor(
-                        #     semantic_map.astype("int32")
-                        # )
                         plane_ids = np.unique(semantic_map)
                         if plane_ids[0] == 0:
                             plane_ids = plane_ids[1:]
@@ -917,15 +769,6 @@ class SparseViewsVisualizer():
                 else:
                     print(self._dataset_name)
 
-                # if self.vis:
-                    # if self._dataset_name=="scannetv1_plane" or self._dataset_name=="nyuv2_plane":
-                    #     image = npz_data["image"] #BGR
-                    #     file_name = os.path.split(input["npz_file_name"])[-1].split(".")[0]
-                        
-                # if "sparseviews" in self._dataset_name:
-                    
-
-
                 gt_vis_dicts.append({
                     'image': image, # (h, w, 3)
                     'segmentation': gt,
@@ -944,41 +787,6 @@ class SparseViewsVisualizer():
                     'K_inv_dot_xy_1': self.k_inv_dot_xy1,
                 })
                 
-
-                # self.RI_VI_SC.append(evaluateMasks(pred, gt, device = "cuda",  pred_non_plane_idx = self._num_planes+1, gt_non_plane_idx=self._num_planes, printInfo=False))
-
-                # ----------------------------------------------------- evaluation
-                # 1 evaluation: plane segmentation
-                # valid_plane_num = len(valid_params)
-                # pixelStatistics, planeStatistics = eval_plane_recall_depth(
-                #     pred, gt, plane_depth, gt_plane_depth, valid_plane_num, self._num_queries)
-                # self.pixelDepth_recall_curve_of_GTpd += np.array(pixelStatistics)
-                # self.planeDepth_recall_curve_of_GTpd += np.array(planeStatistics)
-
-                # 2 evaluation: plane segmentation
-                # instance_param = valid_params.cpu().numpy()
-                # plane_recall, pixel_recall = eval_plane_recall_normal(pred, gt,
-                #                             instance_param, gt_params,
-                #                             )
-                # self.pixelNorm_recall_curve += pixel_recall
-                # self.planeNorm_recall_curve += plane_recall
-
-
-                # 3 evaluation: plane offset
-                # instance_param = valid_params.cpu().numpy()
-                # plane_recall, pixel_recall = eval_plane_recall_offset(pred, gt,
-                #                             instance_param, gt_params,
-                #                             )
-                # self.pixelOff_recall_curve += pixel_recall
-                # self.planeOff_recall_curve += plane_recall
-
-                # instance_param = valid_params.numpy()
-                # normal_error, offset_error = eval_plane_bestmatch_normal_offset(instance_param, gt_params)
-                # self.bestmatch_normal_errors.append(normal_error)
-                # self.bestmatch_offset_errors.append(offset_error)
-
-
-
             # pred_poses = output["pred_poses"] # SE3 [2,6]?
             pred_camera_dict = output["pred_pose"] # {"rotation": w,x,y,z, ...}
             gt_camera_dict = input['rel_pose']
@@ -1089,7 +897,6 @@ class SparseViewsVisualizer():
                                     radius=self.radius,
                                 )
         
-            # !
             vis_iter += 1
         
         
@@ -1139,9 +946,6 @@ if __name__ == "__main__":
     parser.add_argument(
         "--dataset-phase", default="mp3d_test", type=str, help="dataset and phase"
     )
-    # parser.add_argument(
-    #     "--optimized-dict-path", default="", type=str, help="path to optimized dict"
-    # )
 
     parser.add_argument(
         "--output-dir", default=None, type=str, help=""
